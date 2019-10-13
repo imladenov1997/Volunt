@@ -1,4 +1,4 @@
-server/bin
-server/pkg
-server/src
+server/bin/*
+server/pkg/*
+server/src/*
 !server/src/volunt
