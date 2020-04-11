@@ -35,12 +35,12 @@ type Person {
 type Exchange {
     ID: ID
     exchangeFromBill: TotalBill
-    exchangeToBill: ForeignBills
+    exchangeToBill: ForeignBill
     exchangeRate: Float
 }
 
 type Query {
-
+    sampleQuery (test: String): Int
 }
 
 type Mutation {

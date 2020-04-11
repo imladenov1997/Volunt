@@ -1,10 +1,10 @@
 package components
 
 type Person struct {
-	Bill PersonalBill
+	Bill *PersonalBill
 }
 
 type PersonalBill struct {
-	BillCurrency Currency 
+	BillCurrency *Currency 
 	Value float64
 }

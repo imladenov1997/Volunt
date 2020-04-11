@@ -11,12 +11,21 @@ import (
 	"github.com/imladenov1997/volunt/graph/model"
 )
 
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
+func (r *mutationResolver) CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency *string, toBillValue *float64) (*model.Exchange, error) {
+	return nil, nil
+}
+
+func (r *mutationResolver) AddPerson(ctx context.Context, value float64) (*model.Person, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
+func (r *mutationResolver) AddForeignBill(ctx context.Context, currency string, value string) (model.Bill, error) {
 	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *queryResolver) SampleQuery(ctx context.Context, test *string) (*int, error) {
+	result := 5
+	return &result, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

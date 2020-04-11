@@ -27,6 +27,8 @@ func home() interface{} {
 	homeResp := response.Home{"Test"}
 	bill := *components.NewTotalBill("Euro", 34.64)
 	fmt.Printf("%+v", bill)
+
+
 	return homeResp
 }
 
