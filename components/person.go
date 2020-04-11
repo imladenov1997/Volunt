@@ -5,6 +5,6 @@ type Person struct {
 }
 
 type PersonalBill struct {
-	Currency string
+	BillCurrency Currency 
 	Value float64
 }

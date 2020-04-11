@@ -1,0 +1,50 @@
+type Currency {
+    name: String!
+}
+
+interface Bill {
+    ID: ID!
+    currency: Currency
+    value: Float
+}
+
+type TotalBill implements Bill {
+    ID: ID!
+	currency: Currency
+	value: Float
+    people: [Person!]
+}
+
+type PersonalBill implements Bill {
+    ID: ID!
+    currency: Currency
+    value: Float
+}
+
+type ForeignBill implements Bill {
+    ID: ID!
+	currency: Currency
+	value: Float
+}
+
+type Person {
+    ID: ID!
+    bill: PersonalBill
+}
+
+type Exchange {
+    ID: ID
+    exchangeFromBill: TotalBill
+    exchangeToBill: ForeignBills
+    exchangeRate: Float
+}
+
+type Query {
+
+}
+
+type Mutation {
+    createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String, toBillValue: Float): Exchange,
+    addPerson (value: Float!): Person
+    addForeignBill (currency: String!, value: String!): Bill
+}
