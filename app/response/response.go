@@ -1,5 +1,5 @@
 package response
 
 type Home struct {
-	Success string
+	Success string `json:"success"`
 }

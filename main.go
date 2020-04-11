@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"encoding/json"
 	"net/http"
-	"volunt/app/response"
-	"volunt/graphql/queries"
+	"github.com/imladenov1997/volunt/app/response"
+	"github.com/imladenov1997/volunt/graphql/queries"
+	"github.com/imladenov1997/volunt/components"
 
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
@@ -23,6 +25,8 @@ func returnJSON(f func() interface{}) func(http.ResponseWriter, *http.Request) {
 
 func home() interface{} {
 	homeResp := response.Home{"Test"}
+	bill := *components.NewTotalBill("Euro", 34.64)
+	fmt.Printf("%+v", bill)
 	return homeResp
 }
 
