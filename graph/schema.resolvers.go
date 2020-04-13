@@ -12,7 +12,9 @@ import (
 )
 
 func (r *mutationResolver) CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency *string, toBillValue *float64) (*model.Exchange, error) {
-	return nil, nil
+	exchange := r.mutations.CreateExchange(&totalBillCurrency, &totalBillValue, toBillCurrency, toBillValue)
+
+	return exchange, nil
 }
 
 func (r *mutationResolver) AddPerson(ctx context.Context, value float64) (*model.Person, error) {
