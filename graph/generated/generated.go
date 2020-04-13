@@ -61,9 +61,12 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddForeignBill func(childComplexity int, currency string, value string) int
-		AddPerson      func(childComplexity int, value float64) int
-		CreateExchange func(childComplexity int, totalBillCurrency string, totalBillValue float64, toBillCurrency *string, toBillValue *float64) int
+		AddPerson         func(childComplexity int, exchangeID string, value float64) int
+		ChangeCurrency    func(childComplexity int, currency string, value string) int
+		CreateExchange    func(childComplexity int, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) int
+		UpdateForeignBill func(childComplexity int, currency string, value string) int
+		UpdatePersonsBill func(childComplexity int, value float64) int
+		UpdateTotalBill   func(childComplexity int, currency string, value string) int
 	}
 
 	Person struct {
@@ -90,9 +93,12 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency *string, toBillValue *float64) (*model.Exchange, error)
-	AddPerson(ctx context.Context, value float64) (*model.Person, error)
-	AddForeignBill(ctx context.Context, currency string, value string) (model.Bill, error)
+	CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) (*model.Exchange, error)
+	AddPerson(ctx context.Context, exchangeID string, value float64) (*model.Person, error)
+	UpdatePersonsBill(ctx context.Context, value float64) (*model.Person, error)
+	UpdateForeignBill(ctx context.Context, currency string, value string) (model.Bill, error)
+	UpdateTotalBill(ctx context.Context, currency string, value string) (model.Bill, error)
+	ChangeCurrency(ctx context.Context, currency string, value string) (model.Bill, error)
 }
 type QueryResolver interface {
 	SampleQuery(ctx context.Context, test *string) (*int, error)
@@ -169,18 +175,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ForeignBill.Value(childComplexity), true
 
-	case "Mutation.addForeignBill":
-		if e.complexity.Mutation.AddForeignBill == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_addForeignBill_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.AddForeignBill(childComplexity, args["currency"].(string), args["value"].(string)), true
-
 	case "Mutation.addPerson":
 		if e.complexity.Mutation.AddPerson == nil {
 			break
@@ -191,7 +185,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddPerson(childComplexity, args["value"].(float64)), true
+		return e.complexity.Mutation.AddPerson(childComplexity, args["exchangeID"].(string), args["value"].(float64)), true
+
+	case "Mutation.changeCurrency":
+		if e.complexity.Mutation.ChangeCurrency == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_changeCurrency_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ChangeCurrency(childComplexity, args["currency"].(string), args["value"].(string)), true
 
 	case "Mutation.createExchange":
 		if e.complexity.Mutation.CreateExchange == nil {
@@ -203,7 +209,43 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateExchange(childComplexity, args["totalBillCurrency"].(string), args["totalBillValue"].(float64), args["toBillCurrency"].(*string), args["toBillValue"].(*float64)), true
+		return e.complexity.Mutation.CreateExchange(childComplexity, args["totalBillCurrency"].(string), args["totalBillValue"].(float64), args["toBillCurrency"].(string), args["toBillValue"].(float64)), true
+
+	case "Mutation.updateForeignBill":
+		if e.complexity.Mutation.UpdateForeignBill == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateForeignBill_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateForeignBill(childComplexity, args["currency"].(string), args["value"].(string)), true
+
+	case "Mutation.updatePersonsBill":
+		if e.complexity.Mutation.UpdatePersonsBill == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updatePersonsBill_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdatePersonsBill(childComplexity, args["value"].(float64)), true
+
+	case "Mutation.updateTotalBill":
+		if e.complexity.Mutation.UpdateTotalBill == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateTotalBill_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateTotalBill(childComplexity, args["currency"].(string), args["value"].(string)), true
 
 	case "Person.bill":
 		if e.complexity.Person.Bill == nil {
@@ -380,7 +422,7 @@ type Person {
 
 type Exchange {
     ID: ID
-    exchangeFromBill: TotalBill
+    exchangeFromBill: TotalBill 
     exchangeToBill: ForeignBill
     exchangeRate: Float
 }
@@ -390,9 +432,12 @@ type Query {
 }
 
 type Mutation {
-    createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String, toBillValue: Float): Exchange,
-    addPerson (value: Float!): Person
-    addForeignBill (currency: String!, value: String!): Bill
+    createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String!, toBillValue: Float!): Exchange,
+    addPerson (exchangeID: String!, value: Float!): Person
+    updatePersonsBill (value: Float!): Person
+    updateForeignBill (currency: String!, value: String!): Bill
+    updateTotalBill (currency: String!, value: String!): Bill
+    changeCurrency (currency: String!, value: String!): Bill
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -401,7 +446,29 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Mutation_addForeignBill_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_addPerson_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["exchangeID"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["exchangeID"] = arg0
+	var arg1 float64
+	if tmp, ok := rawArgs["value"]; ok {
+		arg1, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["value"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_changeCurrency_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -420,20 +487,6 @@ func (ec *executionContext) field_Mutation_addForeignBill_args(ctx context.Conte
 		}
 	}
 	args["value"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_addPerson_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 float64
-	if tmp, ok := rawArgs["value"]; ok {
-		arg0, err = ec.unmarshalNFloat2float64(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["value"] = arg0
 	return args, nil
 }
 
@@ -456,22 +509,80 @@ func (ec *executionContext) field_Mutation_createExchange_args(ctx context.Conte
 		}
 	}
 	args["totalBillValue"] = arg1
-	var arg2 *string
+	var arg2 string
 	if tmp, ok := rawArgs["toBillCurrency"]; ok {
-		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["toBillCurrency"] = arg2
-	var arg3 *float64
+	var arg3 float64
 	if tmp, ok := rawArgs["toBillValue"]; ok {
-		arg3, err = ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
+		arg3, err = ec.unmarshalNFloat2float64(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["toBillValue"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateForeignBill_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["currency"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["currency"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["value"]; ok {
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["value"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePersonsBill_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 float64
+	if tmp, ok := rawArgs["value"]; ok {
+		arg0, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["value"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateTotalBill_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["currency"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["currency"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["value"]; ok {
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["value"] = arg1
 	return args, nil
 }
 
@@ -817,7 +928,7 @@ func (ec *executionContext) _Mutation_createExchange(ctx context.Context, field 
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateExchange(rctx, args["totalBillCurrency"].(string), args["totalBillValue"].(float64), args["toBillCurrency"].(*string), args["toBillValue"].(*float64))
+		return ec.resolvers.Mutation().CreateExchange(rctx, args["totalBillCurrency"].(string), args["totalBillValue"].(float64), args["toBillCurrency"].(string), args["toBillValue"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -855,7 +966,7 @@ func (ec *executionContext) _Mutation_addPerson(ctx context.Context, field graph
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddPerson(rctx, args["value"].(float64))
+		return ec.resolvers.Mutation().AddPerson(rctx, args["exchangeID"].(string), args["value"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -869,7 +980,7 @@ func (ec *executionContext) _Mutation_addPerson(ctx context.Context, field graph
 	return ec.marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Mutation_addForeignBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_updatePersonsBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -885,7 +996,7 @@ func (ec *executionContext) _Mutation_addForeignBill(ctx context.Context, field 
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_addForeignBill_args(ctx, rawArgs)
+	args, err := ec.field_Mutation_updatePersonsBill_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -893,7 +1004,121 @@ func (ec *executionContext) _Mutation_addForeignBill(ctx context.Context, field 
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddForeignBill(rctx, args["currency"].(string), args["value"].(string))
+		return ec.resolvers.Mutation().UpdatePersonsBill(rctx, args["value"].(float64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Person)
+	fc.Result = res
+	return ec.marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updateForeignBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateForeignBill_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateForeignBill(rctx, args["currency"].(string), args["value"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(model.Bill)
+	fc.Result = res
+	return ec.marshalOBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updateTotalBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateTotalBill_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateTotalBill(rctx, args["currency"].(string), args["value"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(model.Bill)
+	fc.Result = res
+	return ec.marshalOBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_changeCurrency(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_changeCurrency_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().ChangeCurrency(rctx, args["currency"].(string), args["value"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2502,8 +2727,14 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec._Mutation_createExchange(ctx, field)
 		case "addPerson":
 			out.Values[i] = ec._Mutation_addPerson(ctx, field)
-		case "addForeignBill":
-			out.Values[i] = ec._Mutation_addForeignBill(ctx, field)
+		case "updatePersonsBill":
+			out.Values[i] = ec._Mutation_updatePersonsBill(ctx, field)
+		case "updateForeignBill":
+			out.Values[i] = ec._Mutation_updateForeignBill(ctx, field)
+		case "updateTotalBill":
+			out.Values[i] = ec._Mutation_updateTotalBill(ctx, field)
+		case "changeCurrency":
+			out.Values[i] = ec._Mutation_changeCurrency(ctx, field)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

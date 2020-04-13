@@ -11,17 +11,31 @@ import (
 	"github.com/imladenov1997/volunt/graph/model"
 )
 
-func (r *mutationResolver) CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency *string, toBillValue *float64) (*model.Exchange, error) {
-	exchange := r.mutations.CreateExchange(&totalBillCurrency, &totalBillValue, toBillCurrency, toBillValue)
+func (r *mutationResolver) CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) (*model.Exchange, error) {
+	exchange, err := r.mutations.CreateExchange(&totalBillCurrency, &totalBillValue, &toBillCurrency, &toBillValue)
 
-	return exchange, nil
+	return exchange, err
 }
 
-func (r *mutationResolver) AddPerson(ctx context.Context, value float64) (*model.Person, error) {
+func (r *mutationResolver) AddPerson(ctx context.Context, exchangeID string, value float64) (*model.Person, error) {
+	exchange, err := r.mutations.AddPerson(&exchangeID, &value)
+	
+	return exchange, err
+}
+
+func (r *mutationResolver) UpdatePersonsBill(ctx context.Context, value float64) (*model.Person, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) AddForeignBill(ctx context.Context, currency string, value string) (model.Bill, error) {
+func (r *mutationResolver) UpdateForeignBill(ctx context.Context, currency string, value string) (model.Bill, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *mutationResolver) UpdateTotalBill(ctx context.Context, currency string, value string) (model.Bill, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *mutationResolver) ChangeCurrency(ctx context.Context, currency string, value string) (model.Bill, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
