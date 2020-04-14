@@ -46,3 +46,15 @@ func (m *Mutations) AddPerson(exchangeID *string, value *float64) (person *model
 
 	return person, nil
 }
+
+func (m *Mutations) UpdatePersonalBill(exchangeID *string, personID *string, value *float64) (*model.Person, error) {
+	database := db.DB{}
+	_, exchangeErr := database.GetExchange(exchangeID)
+
+	if (exchangeErr != nil) {
+		return nil, exchangeErr
+	}
+
+	return nil, nil
+
+}

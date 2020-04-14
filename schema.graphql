@@ -12,7 +12,7 @@ type TotalBill implements Bill {
     ID: ID!
 	currency: Currency
 	value: Float
-    people: [Person!]
+    people: Map
 }
 
 type PersonalBill implements Bill {
@@ -40,14 +40,16 @@ type Exchange {
 }
 
 type Query {
-    sampleQuery (test: String): Int
+    getExchange(ID: String!): Exchange
 }
 
 type Mutation {
     createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String!, toBillValue: Float!): Exchange,
     addPerson (exchangeID: String!, value: Float!): Person
-    updatePersonsBill (value: Float!): Person
-    updateForeignBill (currency: String!, value: String!): Bill
-    updateTotalBill (currency: String!, value: String!): Bill
-    changeCurrency (currency: String!, value: String!): Bill
+    updatePersonalBill (exchangeID: ID!, personID: ID!, value: Float!): Person
+    updateForeignBill (exchangeID: ID!, currency: String!, value: String!): Bill
+    updateTotalBill (exchangeID: ID!, currency: String!, value: String!): Bill
+    changeCurrency (billID: ID!, currency: String!, value: String!): Bill
 }
+
+scalar Map

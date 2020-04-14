@@ -61,12 +61,12 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddPerson         func(childComplexity int, exchangeID string, value float64) int
-		ChangeCurrency    func(childComplexity int, currency string, value string) int
-		CreateExchange    func(childComplexity int, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) int
-		UpdateForeignBill func(childComplexity int, currency string, value string) int
-		UpdatePersonsBill func(childComplexity int, value float64) int
-		UpdateTotalBill   func(childComplexity int, currency string, value string) int
+		AddPerson          func(childComplexity int, exchangeID string, value float64) int
+		ChangeCurrency     func(childComplexity int, billID string, currency string, value string) int
+		CreateExchange     func(childComplexity int, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) int
+		UpdateForeignBill  func(childComplexity int, exchangeID string, currency string, value string) int
+		UpdatePersonalBill func(childComplexity int, exchangeID string, personID string, value float64) int
+		UpdateTotalBill    func(childComplexity int, exchangeID string, currency string, value string) int
 	}
 
 	Person struct {
@@ -81,7 +81,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		SampleQuery func(childComplexity int, test *string) int
+		GetExchange func(childComplexity int, id string) int
 	}
 
 	TotalBill struct {
@@ -95,13 +95,13 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) (*model.Exchange, error)
 	AddPerson(ctx context.Context, exchangeID string, value float64) (*model.Person, error)
-	UpdatePersonsBill(ctx context.Context, value float64) (*model.Person, error)
-	UpdateForeignBill(ctx context.Context, currency string, value string) (model.Bill, error)
-	UpdateTotalBill(ctx context.Context, currency string, value string) (model.Bill, error)
-	ChangeCurrency(ctx context.Context, currency string, value string) (model.Bill, error)
+	UpdatePersonalBill(ctx context.Context, exchangeID string, personID string, value float64) (*model.Person, error)
+	UpdateForeignBill(ctx context.Context, exchangeID string, currency string, value string) (model.Bill, error)
+	UpdateTotalBill(ctx context.Context, exchangeID string, currency string, value string) (model.Bill, error)
+	ChangeCurrency(ctx context.Context, billID string, currency string, value string) (model.Bill, error)
 }
 type QueryResolver interface {
-	SampleQuery(ctx context.Context, test *string) (*int, error)
+	GetExchange(ctx context.Context, id string) (*model.Exchange, error)
 }
 
 type executableSchema struct {
@@ -197,7 +197,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ChangeCurrency(childComplexity, args["currency"].(string), args["value"].(string)), true
+		return e.complexity.Mutation.ChangeCurrency(childComplexity, args["billID"].(string), args["currency"].(string), args["value"].(string)), true
 
 	case "Mutation.createExchange":
 		if e.complexity.Mutation.CreateExchange == nil {
@@ -221,19 +221,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateForeignBill(childComplexity, args["currency"].(string), args["value"].(string)), true
+		return e.complexity.Mutation.UpdateForeignBill(childComplexity, args["exchangeID"].(string), args["currency"].(string), args["value"].(string)), true
 
-	case "Mutation.updatePersonsBill":
-		if e.complexity.Mutation.UpdatePersonsBill == nil {
+	case "Mutation.updatePersonalBill":
+		if e.complexity.Mutation.UpdatePersonalBill == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_updatePersonsBill_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_updatePersonalBill_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdatePersonsBill(childComplexity, args["value"].(float64)), true
+		return e.complexity.Mutation.UpdatePersonalBill(childComplexity, args["exchangeID"].(string), args["personID"].(string), args["value"].(float64)), true
 
 	case "Mutation.updateTotalBill":
 		if e.complexity.Mutation.UpdateTotalBill == nil {
@@ -245,7 +245,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateTotalBill(childComplexity, args["currency"].(string), args["value"].(string)), true
+		return e.complexity.Mutation.UpdateTotalBill(childComplexity, args["exchangeID"].(string), args["currency"].(string), args["value"].(string)), true
 
 	case "Person.bill":
 		if e.complexity.Person.Bill == nil {
@@ -282,17 +282,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PersonalBill.Value(childComplexity), true
 
-	case "Query.sampleQuery":
-		if e.complexity.Query.SampleQuery == nil {
+	case "Query.getExchange":
+		if e.complexity.Query.GetExchange == nil {
 			break
 		}
 
-		args, err := ec.field_Query_sampleQuery_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_getExchange_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.SampleQuery(childComplexity, args["test"].(*string)), true
+		return e.complexity.Query.GetExchange(childComplexity, args["ID"].(string)), true
 
 	case "TotalBill.currency":
 		if e.complexity.TotalBill.Currency == nil {
@@ -400,7 +400,7 @@ type TotalBill implements Bill {
     ID: ID!
 	currency: Currency
 	value: Float
-    people: [Person!]
+    people: Map
 }
 
 type PersonalBill implements Bill {
@@ -428,17 +428,19 @@ type Exchange {
 }
 
 type Query {
-    sampleQuery (test: String): Int
+    getExchange(ID: String!): Exchange
 }
 
 type Mutation {
     createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String!, toBillValue: Float!): Exchange,
     addPerson (exchangeID: String!, value: Float!): Person
-    updatePersonsBill (value: Float!): Person
-    updateForeignBill (currency: String!, value: String!): Bill
-    updateTotalBill (currency: String!, value: String!): Bill
-    changeCurrency (currency: String!, value: String!): Bill
-}`, BuiltIn: false},
+    updatePersonalBill (exchangeID: ID!, personID: ID!, value: Float!): Person
+    updateForeignBill (exchangeID: ID!, currency: String!, value: String!): Bill
+    updateTotalBill (exchangeID: ID!, currency: String!, value: String!): Bill
+    changeCurrency (billID: ID!, currency: String!, value: String!): Bill
+}
+
+scalar Map`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
@@ -472,21 +474,29 @@ func (ec *executionContext) field_Mutation_changeCurrency_args(ctx context.Conte
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["currency"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	if tmp, ok := rawArgs["billID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["currency"] = arg0
+	args["billID"] = arg0
 	var arg1 string
-	if tmp, ok := rawArgs["value"]; ok {
+	if tmp, ok := rawArgs["currency"]; ok {
 		arg1, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["value"] = arg1
+	args["currency"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["value"]; ok {
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["value"] = arg2
 	return args, nil
 }
 
@@ -532,35 +542,59 @@ func (ec *executionContext) field_Mutation_updateForeignBill_args(ctx context.Co
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["currency"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	if tmp, ok := rawArgs["exchangeID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["currency"] = arg0
+	args["exchangeID"] = arg0
 	var arg1 string
-	if tmp, ok := rawArgs["value"]; ok {
+	if tmp, ok := rawArgs["currency"]; ok {
 		arg1, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["value"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_updatePersonsBill_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 float64
+	args["currency"] = arg1
+	var arg2 string
 	if tmp, ok := rawArgs["value"]; ok {
-		arg0, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["value"] = arg0
+	args["value"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePersonalBill_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["exchangeID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["exchangeID"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["personID"]; ok {
+		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["personID"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["value"]; ok {
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["value"] = arg2
 	return args, nil
 }
 
@@ -568,21 +602,29 @@ func (ec *executionContext) field_Mutation_updateTotalBill_args(ctx context.Cont
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["currency"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	if tmp, ok := rawArgs["exchangeID"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["currency"] = arg0
+	args["exchangeID"] = arg0
 	var arg1 string
-	if tmp, ok := rawArgs["value"]; ok {
+	if tmp, ok := rawArgs["currency"]; ok {
 		arg1, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["value"] = arg1
+	args["currency"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["value"]; ok {
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["value"] = arg2
 	return args, nil
 }
 
@@ -600,17 +642,17 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_sampleQuery_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_getExchange_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
-	if tmp, ok := rawArgs["test"]; ok {
-		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["ID"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["test"] = arg0
+	args["ID"] = arg0
 	return args, nil
 }
 
@@ -980,7 +1022,7 @@ func (ec *executionContext) _Mutation_addPerson(ctx context.Context, field graph
 	return ec.marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Mutation_updatePersonsBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_updatePersonalBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -996,7 +1038,7 @@ func (ec *executionContext) _Mutation_updatePersonsBill(ctx context.Context, fie
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_updatePersonsBill_args(ctx, rawArgs)
+	args, err := ec.field_Mutation_updatePersonalBill_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -1004,7 +1046,7 @@ func (ec *executionContext) _Mutation_updatePersonsBill(ctx context.Context, fie
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdatePersonsBill(rctx, args["value"].(float64))
+		return ec.resolvers.Mutation().UpdatePersonalBill(rctx, args["exchangeID"].(string), args["personID"].(string), args["value"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1042,7 +1084,7 @@ func (ec *executionContext) _Mutation_updateForeignBill(ctx context.Context, fie
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateForeignBill(rctx, args["currency"].(string), args["value"].(string))
+		return ec.resolvers.Mutation().UpdateForeignBill(rctx, args["exchangeID"].(string), args["currency"].(string), args["value"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1080,7 +1122,7 @@ func (ec *executionContext) _Mutation_updateTotalBill(ctx context.Context, field
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateTotalBill(rctx, args["currency"].(string), args["value"].(string))
+		return ec.resolvers.Mutation().UpdateTotalBill(rctx, args["exchangeID"].(string), args["currency"].(string), args["value"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1118,7 +1160,7 @@ func (ec *executionContext) _Mutation_changeCurrency(ctx context.Context, field 
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ChangeCurrency(rctx, args["currency"].(string), args["value"].(string))
+		return ec.resolvers.Mutation().ChangeCurrency(rctx, args["billID"].(string), args["currency"].(string), args["value"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1293,7 +1335,7 @@ func (ec *executionContext) _PersonalBill_value(ctx context.Context, field graph
 	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Query_sampleQuery(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_getExchange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1309,7 +1351,7 @@ func (ec *executionContext) _Query_sampleQuery(ctx context.Context, field graphq
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_sampleQuery_args(ctx, rawArgs)
+	args, err := ec.field_Query_getExchange_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -1317,7 +1359,7 @@ func (ec *executionContext) _Query_sampleQuery(ctx context.Context, field graphq
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().SampleQuery(rctx, args["test"].(*string))
+		return ec.resolvers.Query().GetExchange(rctx, args["ID"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1326,9 +1368,9 @@ func (ec *executionContext) _Query_sampleQuery(ctx context.Context, field graphq
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(*model.Exchange)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOExchange2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐExchange(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1522,9 +1564,9 @@ func (ec *executionContext) _TotalBill_people(ctx context.Context, field graphql
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Person)
+	res := resTmp.(map[string]interface{})
 	fc.Result = res
-	return ec.marshalOPerson2ᚕᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPersonᚄ(ctx, field.Selections, res)
+	return ec.marshalOMap2map(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -2727,8 +2769,8 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec._Mutation_createExchange(ctx, field)
 		case "addPerson":
 			out.Values[i] = ec._Mutation_addPerson(ctx, field)
-		case "updatePersonsBill":
-			out.Values[i] = ec._Mutation_updatePersonsBill(ctx, field)
+		case "updatePersonalBill":
+			out.Values[i] = ec._Mutation_updatePersonalBill(ctx, field)
 		case "updateForeignBill":
 			out.Values[i] = ec._Mutation_updateForeignBill(ctx, field)
 		case "updateTotalBill":
@@ -2821,7 +2863,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "sampleQuery":
+		case "getExchange":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -2829,7 +2871,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_sampleQuery(ctx, field)
+				res = ec._Query_getExchange(ctx, field)
 				return res
 			})
 		case "__type":
@@ -3165,20 +3207,6 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNPerson2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v model.Person) graphql.Marshaler {
-	return ec._Person(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v *model.Person) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._Person(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -3530,71 +3558,22 @@ func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.Se
 	return ec.marshalOID2string(ctx, sel, *v)
 }
 
-func (ec *executionContext) unmarshalOInt2int(ctx context.Context, v interface{}) (int, error) {
-	return graphql.UnmarshalInt(v)
-}
-
-func (ec *executionContext) marshalOInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
-	return graphql.MarshalInt(v)
-}
-
-func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+func (ec *executionContext) unmarshalOMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOInt2int(ctx, v)
-	return &res, err
+	return graphql.UnmarshalMap(v)
 }
 
-func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+func (ec *executionContext) marshalOMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]interface{}) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOInt2int(ctx, sel, *v)
+	return graphql.MarshalMap(v)
 }
 
 func (ec *executionContext) marshalOPerson2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v model.Person) graphql.Marshaler {
 	return ec._Person(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalOPerson2ᚕᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPersonᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Person) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
 }
 
 func (ec *executionContext) marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v *model.Person) graphql.Marshaler {

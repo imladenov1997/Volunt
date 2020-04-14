@@ -2,12 +2,13 @@ package model
 
 import (
 	"github.com/google/uuid"
+	"errors"
 )
 
 func NewTotalBill(billCurrency *string, value *float64) *TotalBill {
 	billID := uuid.New().String()
 	currency := Currency{Name: *billCurrency}
-	people := make([]*Person, 0)
+	people := make(map[string]interface{})
 	totalBill := TotalBill{ID: billID, Currency: &currency, Value: value, People: people}
 
 	return &totalBill
@@ -44,12 +45,38 @@ func NewExchangeBill(totalBill *TotalBill, foreignBill *ForeignBill) *Exchange {
 	return &exc
 }
 
+func (totalBill *TotalBill) AddPersonRef(person *Person) *Person {
+	totalBill.People[person.ID] = person
+
+	return person
+}
+
 func (totalBill *TotalBill) AddPerson(value *float64) *Person {
 	personID := uuid.New().String()
 	billID := uuid.New().String()
 
 	personalBill := PersonalBill{ID: billID, Currency: totalBill.Currency, Value: value}
-	person := Person{ID: personID, Bill: &personalBill}
+	person := &Person{ID: personID, Bill: &personalBill}
 
-	return &person
+	totalBill.AddPersonRef(person)
+
+	return person
+}
+
+func (exchange *Exchange) GetTotalBill() *TotalBill {
+	return exchange.ExchangeFromBill
+}
+
+func (bill *TotalBill) HasPerson(personID *string) (bool, error) {
+	if (personID == nil) {
+		return false, errors.New("No valid PersonID")
+	}
+
+	_, hasVal := bill.People[*personID]
+	
+	return hasVal, nil
+}
+
+func (person *Person) CheckID(personID *string) bool {
+	return person.ID == *personID
 }

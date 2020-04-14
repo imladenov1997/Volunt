@@ -39,10 +39,10 @@ type PersonalBill struct {
 func (PersonalBill) IsBill() {}
 
 type TotalBill struct {
-	ID       string    `json:"ID"`
-	Currency *Currency `json:"currency"`
-	Value    *float64  `json:"value"`
-	People   []*Person `json:"people"`
+	ID       string                 `json:"ID"`
+	Currency *Currency              `json:"currency"`
+	Value    *float64               `json:"value"`
+	People   map[string]interface{} `json:"people"`
 }
 
 func (TotalBill) IsBill() {}
