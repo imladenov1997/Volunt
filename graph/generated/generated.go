@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"sync"
 
@@ -43,21 +42,29 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Bill struct {
+		Currency func(childComplexity int) int
+		ID       func(childComplexity int) int
+		Value    func(childComplexity int) int
+	}
+
 	Currency struct {
 		Name func(childComplexity int) int
 	}
 
 	Exchange struct {
-		ExchangeFromBill func(childComplexity int) int
-		ExchangeRate     func(childComplexity int) int
-		ExchangeToBill   func(childComplexity int) int
-		ID               func(childComplexity int) int
+		ExchangeRate func(childComplexity int) int
+		FromBill     func(childComplexity int) int
+		ID           func(childComplexity int) int
+		People       func(childComplexity int) int
+		ToBill       func(childComplexity int) int
 	}
 
-	ForeignBill struct {
-		Currency func(childComplexity int) int
-		ID       func(childComplexity int) int
-		Value    func(childComplexity int) int
+	ExchangePair struct {
+		FromValue func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Owner     func(childComplexity int) int
+		ToValue   func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -70,35 +77,21 @@ type ComplexityRoot struct {
 	}
 
 	Person struct {
-		Bill func(childComplexity int) int
-		ID   func(childComplexity int) int
-	}
-
-	PersonalBill struct {
-		Currency func(childComplexity int) int
-		ID       func(childComplexity int) int
-		Value    func(childComplexity int) int
+		ID func(childComplexity int) int
 	}
 
 	Query struct {
 		GetExchange func(childComplexity int, id string) int
 	}
-
-	TotalBill struct {
-		Currency func(childComplexity int) int
-		ID       func(childComplexity int) int
-		People   func(childComplexity int) int
-		Value    func(childComplexity int) int
-	}
 }
 
 type MutationResolver interface {
 	CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) (*model.Exchange, error)
-	AddPerson(ctx context.Context, exchangeID string, value float64) (*model.Person, error)
+	AddPerson(ctx context.Context, exchangeID string, value float64) (*model.ExchangePair, error)
 	UpdatePersonalBill(ctx context.Context, exchangeID string, personID string, value float64) (*model.Person, error)
-	UpdateForeignBill(ctx context.Context, exchangeID string, currency string, value string) (model.Bill, error)
-	UpdateTotalBill(ctx context.Context, exchangeID string, currency string, value string) (model.Bill, error)
-	ChangeCurrency(ctx context.Context, billID string, currency string, value string) (model.Bill, error)
+	UpdateForeignBill(ctx context.Context, exchangeID string, currency string, value string) (*model.Bill, error)
+	UpdateTotalBill(ctx context.Context, exchangeID string, currency string, value string) (*model.Bill, error)
+	ChangeCurrency(ctx context.Context, billID string, currency string, value string) (*model.Bill, error)
 }
 type QueryResolver interface {
 	GetExchange(ctx context.Context, id string) (*model.Exchange, error)
@@ -119,19 +112,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
+	case "Bill.currency":
+		if e.complexity.Bill.Currency == nil {
+			break
+		}
+
+		return e.complexity.Bill.Currency(childComplexity), true
+
+	case "Bill.ID":
+		if e.complexity.Bill.ID == nil {
+			break
+		}
+
+		return e.complexity.Bill.ID(childComplexity), true
+
+	case "Bill.value":
+		if e.complexity.Bill.Value == nil {
+			break
+		}
+
+		return e.complexity.Bill.Value(childComplexity), true
+
 	case "Currency.name":
 		if e.complexity.Currency.Name == nil {
 			break
 		}
 
 		return e.complexity.Currency.Name(childComplexity), true
-
-	case "Exchange.exchangeFromBill":
-		if e.complexity.Exchange.ExchangeFromBill == nil {
-			break
-		}
-
-		return e.complexity.Exchange.ExchangeFromBill(childComplexity), true
 
 	case "Exchange.exchangeRate":
 		if e.complexity.Exchange.ExchangeRate == nil {
@@ -140,12 +147,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Exchange.ExchangeRate(childComplexity), true
 
-	case "Exchange.exchangeToBill":
-		if e.complexity.Exchange.ExchangeToBill == nil {
+	case "Exchange.fromBill":
+		if e.complexity.Exchange.FromBill == nil {
 			break
 		}
 
-		return e.complexity.Exchange.ExchangeToBill(childComplexity), true
+		return e.complexity.Exchange.FromBill(childComplexity), true
 
 	case "Exchange.ID":
 		if e.complexity.Exchange.ID == nil {
@@ -154,26 +161,47 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Exchange.ID(childComplexity), true
 
-	case "ForeignBill.currency":
-		if e.complexity.ForeignBill.Currency == nil {
+	case "Exchange.people":
+		if e.complexity.Exchange.People == nil {
 			break
 		}
 
-		return e.complexity.ForeignBill.Currency(childComplexity), true
+		return e.complexity.Exchange.People(childComplexity), true
 
-	case "ForeignBill.ID":
-		if e.complexity.ForeignBill.ID == nil {
+	case "Exchange.toBill":
+		if e.complexity.Exchange.ToBill == nil {
 			break
 		}
 
-		return e.complexity.ForeignBill.ID(childComplexity), true
+		return e.complexity.Exchange.ToBill(childComplexity), true
 
-	case "ForeignBill.value":
-		if e.complexity.ForeignBill.Value == nil {
+	case "ExchangePair.fromValue":
+		if e.complexity.ExchangePair.FromValue == nil {
 			break
 		}
 
-		return e.complexity.ForeignBill.Value(childComplexity), true
+		return e.complexity.ExchangePair.FromValue(childComplexity), true
+
+	case "ExchangePair.ID":
+		if e.complexity.ExchangePair.ID == nil {
+			break
+		}
+
+		return e.complexity.ExchangePair.ID(childComplexity), true
+
+	case "ExchangePair.owner":
+		if e.complexity.ExchangePair.Owner == nil {
+			break
+		}
+
+		return e.complexity.ExchangePair.Owner(childComplexity), true
+
+	case "ExchangePair.toValue":
+		if e.complexity.ExchangePair.ToValue == nil {
+			break
+		}
+
+		return e.complexity.ExchangePair.ToValue(childComplexity), true
 
 	case "Mutation.addPerson":
 		if e.complexity.Mutation.AddPerson == nil {
@@ -247,40 +275,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateTotalBill(childComplexity, args["exchangeID"].(string), args["currency"].(string), args["value"].(string)), true
 
-	case "Person.bill":
-		if e.complexity.Person.Bill == nil {
-			break
-		}
-
-		return e.complexity.Person.Bill(childComplexity), true
-
 	case "Person.ID":
 		if e.complexity.Person.ID == nil {
 			break
 		}
 
 		return e.complexity.Person.ID(childComplexity), true
-
-	case "PersonalBill.currency":
-		if e.complexity.PersonalBill.Currency == nil {
-			break
-		}
-
-		return e.complexity.PersonalBill.Currency(childComplexity), true
-
-	case "PersonalBill.ID":
-		if e.complexity.PersonalBill.ID == nil {
-			break
-		}
-
-		return e.complexity.PersonalBill.ID(childComplexity), true
-
-	case "PersonalBill.value":
-		if e.complexity.PersonalBill.Value == nil {
-			break
-		}
-
-		return e.complexity.PersonalBill.Value(childComplexity), true
 
 	case "Query.getExchange":
 		if e.complexity.Query.GetExchange == nil {
@@ -293,34 +293,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetExchange(childComplexity, args["ID"].(string)), true
-
-	case "TotalBill.currency":
-		if e.complexity.TotalBill.Currency == nil {
-			break
-		}
-
-		return e.complexity.TotalBill.Currency(childComplexity), true
-
-	case "TotalBill.ID":
-		if e.complexity.TotalBill.ID == nil {
-			break
-		}
-
-		return e.complexity.TotalBill.ID(childComplexity), true
-
-	case "TotalBill.people":
-		if e.complexity.TotalBill.People == nil {
-			break
-		}
-
-		return e.complexity.TotalBill.People(childComplexity), true
-
-	case "TotalBill.value":
-		if e.complexity.TotalBill.Value == nil {
-			break
-		}
-
-		return e.complexity.TotalBill.Value(childComplexity), true
 
 	}
 	return 0, false
@@ -390,26 +362,7 @@ var sources = []*ast.Source{
     name: String!
 }
 
-interface Bill {
-    ID: ID!
-    currency: Currency
-    value: Float
-}
-
-type TotalBill implements Bill {
-    ID: ID!
-	currency: Currency
-	value: Float
-    people: Map
-}
-
-type PersonalBill implements Bill {
-    ID: ID!
-    currency: Currency
-    value: Float
-}
-
-type ForeignBill implements Bill {
+type Bill {
     ID: ID!
 	currency: Currency
 	value: Float
@@ -417,14 +370,21 @@ type ForeignBill implements Bill {
 
 type Person {
     ID: ID!
-    bill: PersonalBill
 }
 
 type Exchange {
     ID: ID
-    exchangeFromBill: TotalBill 
-    exchangeToBill: ForeignBill
+    fromBill: Bill
+    toBill: Bill
     exchangeRate: Float
+    people: Map
+}
+
+type ExchangePair {
+    ID: ID
+    owner: Person
+    fromValue: Float
+    toValue: Float
 }
 
 type Query {
@@ -433,7 +393,7 @@ type Query {
 
 type Mutation {
     createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String!, toBillValue: Float!): Exchange,
-    addPerson (exchangeID: String!, value: Float!): Person
+    addPerson (exchangeID: String!, value: Float!): ExchangePair
     updatePersonalBill (exchangeID: ID!, personID: ID!, value: Float!): Person
     updateForeignBill (exchangeID: ID!, currency: String!, value: String!): Bill
     updateTotalBill (exchangeID: ID!, currency: String!, value: String!): Bill
@@ -692,6 +652,102 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
+func (ec *executionContext) _Bill_ID(ctx context.Context, field graphql.CollectedField, obj *model.Bill) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Bill",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Bill_currency(ctx context.Context, field graphql.CollectedField, obj *model.Bill) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Bill",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Currency, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Currency)
+	fc.Result = res
+	return ec.marshalOCurrency2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐCurrency(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Bill_value(ctx context.Context, field graphql.CollectedField, obj *model.Bill) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Bill",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Currency_name(ctx context.Context, field graphql.CollectedField, obj *model.Currency) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -757,7 +813,7 @@ func (ec *executionContext) _Exchange_ID(ctx context.Context, field graphql.Coll
 	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Exchange_exchangeFromBill(ctx context.Context, field graphql.CollectedField, obj *model.Exchange) (ret graphql.Marshaler) {
+func (ec *executionContext) _Exchange_fromBill(ctx context.Context, field graphql.CollectedField, obj *model.Exchange) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -774,7 +830,7 @@ func (ec *executionContext) _Exchange_exchangeFromBill(ctx context.Context, fiel
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ExchangeFromBill, nil
+		return obj.FromBill, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -783,12 +839,12 @@ func (ec *executionContext) _Exchange_exchangeFromBill(ctx context.Context, fiel
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.TotalBill)
+	res := resTmp.(*model.Bill)
 	fc.Result = res
-	return ec.marshalOTotalBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐTotalBill(ctx, field.Selections, res)
+	return ec.marshalOBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Exchange_exchangeToBill(ctx context.Context, field graphql.CollectedField, obj *model.Exchange) (ret graphql.Marshaler) {
+func (ec *executionContext) _Exchange_toBill(ctx context.Context, field graphql.CollectedField, obj *model.Exchange) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -805,7 +861,7 @@ func (ec *executionContext) _Exchange_exchangeToBill(ctx context.Context, field 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ExchangeToBill, nil
+		return obj.ToBill, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -814,9 +870,9 @@ func (ec *executionContext) _Exchange_exchangeToBill(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.ForeignBill)
+	res := resTmp.(*model.Bill)
 	fc.Result = res
-	return ec.marshalOForeignBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐForeignBill(ctx, field.Selections, res)
+	return ec.marshalOBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Exchange_exchangeRate(ctx context.Context, field graphql.CollectedField, obj *model.Exchange) (ret graphql.Marshaler) {
@@ -850,7 +906,7 @@ func (ec *executionContext) _Exchange_exchangeRate(ctx context.Context, field gr
 	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ForeignBill_ID(ctx context.Context, field graphql.CollectedField, obj *model.ForeignBill) (ret graphql.Marshaler) {
+func (ec *executionContext) _Exchange_people(ctx context.Context, field graphql.CollectedField, obj *model.Exchange) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -858,7 +914,38 @@ func (ec *executionContext) _ForeignBill_ID(ctx context.Context, field graphql.C
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:   "ForeignBill",
+		Object:   "Exchange",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.People, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ExchangePair_ID(ctx context.Context, field graphql.CollectedField, obj *model.ExchangePair) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ExchangePair",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -874,17 +961,14 @@ func (ec *executionContext) _ForeignBill_ID(ctx context.Context, field graphql.C
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ForeignBill_currency(ctx context.Context, field graphql.CollectedField, obj *model.ForeignBill) (ret graphql.Marshaler) {
+func (ec *executionContext) _ExchangePair_owner(ctx context.Context, field graphql.CollectedField, obj *model.ExchangePair) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -892,7 +976,7 @@ func (ec *executionContext) _ForeignBill_currency(ctx context.Context, field gra
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:   "ForeignBill",
+		Object:   "ExchangePair",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -901,7 +985,7 @@ func (ec *executionContext) _ForeignBill_currency(ctx context.Context, field gra
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Currency, nil
+		return obj.Owner, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -910,12 +994,12 @@ func (ec *executionContext) _ForeignBill_currency(ctx context.Context, field gra
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Currency)
+	res := resTmp.(*model.Person)
 	fc.Result = res
-	return ec.marshalOCurrency2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐCurrency(ctx, field.Selections, res)
+	return ec.marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ForeignBill_value(ctx context.Context, field graphql.CollectedField, obj *model.ForeignBill) (ret graphql.Marshaler) {
+func (ec *executionContext) _ExchangePair_fromValue(ctx context.Context, field graphql.CollectedField, obj *model.ExchangePair) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -923,7 +1007,7 @@ func (ec *executionContext) _ForeignBill_value(ctx context.Context, field graphq
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:   "ForeignBill",
+		Object:   "ExchangePair",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -932,7 +1016,38 @@ func (ec *executionContext) _ForeignBill_value(ctx context.Context, field graphq
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Value, nil
+		return obj.FromValue, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ExchangePair_toValue(ctx context.Context, field graphql.CollectedField, obj *model.ExchangePair) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ExchangePair",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ToValue, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1017,9 +1132,9 @@ func (ec *executionContext) _Mutation_addPerson(ctx context.Context, field graph
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Person)
+	res := resTmp.(*model.ExchangePair)
 	fc.Result = res
-	return ec.marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx, field.Selections, res)
+	return ec.marshalOExchangePair2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐExchangePair(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_updatePersonalBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1093,9 +1208,9 @@ func (ec *executionContext) _Mutation_updateForeignBill(ctx context.Context, fie
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(model.Bill)
+	res := resTmp.(*model.Bill)
 	fc.Result = res
-	return ec.marshalOBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
+	return ec.marshalOBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_updateTotalBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1131,9 +1246,9 @@ func (ec *executionContext) _Mutation_updateTotalBill(ctx context.Context, field
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(model.Bill)
+	res := resTmp.(*model.Bill)
 	fc.Result = res
-	return ec.marshalOBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
+	return ec.marshalOBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_changeCurrency(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1169,9 +1284,9 @@ func (ec *executionContext) _Mutation_changeCurrency(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(model.Bill)
+	res := resTmp.(*model.Bill)
 	fc.Result = res
-	return ec.marshalOBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
+	return ec.marshalOBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Person_ID(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
@@ -1206,133 +1321,6 @@ func (ec *executionContext) _Person_ID(ctx context.Context, field graphql.Collec
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Person_bill(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Person",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Bill, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.PersonalBill)
-	fc.Result = res
-	return ec.marshalOPersonalBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPersonalBill(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _PersonalBill_ID(ctx context.Context, field graphql.CollectedField, obj *model.PersonalBill) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "PersonalBill",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _PersonalBill_currency(ctx context.Context, field graphql.CollectedField, obj *model.PersonalBill) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "PersonalBill",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Currency, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.Currency)
-	fc.Result = res
-	return ec.marshalOCurrency2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐCurrency(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _PersonalBill_value(ctx context.Context, field graphql.CollectedField, obj *model.PersonalBill) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "PersonalBill",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Value, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*float64)
-	fc.Result = res
-	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_getExchange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1440,133 +1428,6 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	res := resTmp.(*introspection.Schema)
 	fc.Result = res
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _TotalBill_ID(ctx context.Context, field graphql.CollectedField, obj *model.TotalBill) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "TotalBill",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _TotalBill_currency(ctx context.Context, field graphql.CollectedField, obj *model.TotalBill) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "TotalBill",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Currency, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.Currency)
-	fc.Result = res
-	return ec.marshalOCurrency2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐCurrency(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _TotalBill_value(ctx context.Context, field graphql.CollectedField, obj *model.TotalBill) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "TotalBill",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Value, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*float64)
-	fc.Result = res
-	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _TotalBill_people(ctx context.Context, field graphql.CollectedField, obj *model.TotalBill) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "TotalBill",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.People, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(map[string]interface{})
-	fc.Result = res
-	return ec.marshalOMap2map(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -2628,39 +2489,40 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    ************************** interface.gotpl ***************************
 
-func (ec *executionContext) _Bill(ctx context.Context, sel ast.SelectionSet, obj model.Bill) graphql.Marshaler {
-	switch obj := (obj).(type) {
-	case nil:
-		return graphql.Null
-	case model.TotalBill:
-		return ec._TotalBill(ctx, sel, &obj)
-	case *model.TotalBill:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._TotalBill(ctx, sel, obj)
-	case model.PersonalBill:
-		return ec._PersonalBill(ctx, sel, &obj)
-	case *model.PersonalBill:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._PersonalBill(ctx, sel, obj)
-	case model.ForeignBill:
-		return ec._ForeignBill(ctx, sel, &obj)
-	case *model.ForeignBill:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._ForeignBill(ctx, sel, obj)
-	default:
-		panic(fmt.Errorf("unexpected type %T", obj))
-	}
-}
-
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
+
+var billImplementors = []string{"Bill"}
+
+func (ec *executionContext) _Bill(ctx context.Context, sel ast.SelectionSet, obj *model.Bill) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, billImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Bill")
+		case "ID":
+			out.Values[i] = ec._Bill_ID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "currency":
+			out.Values[i] = ec._Bill_currency(ctx, field, obj)
+		case "value":
+			out.Values[i] = ec._Bill_value(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
 
 var currencyImplementors = []string{"Currency"}
 
@@ -2702,12 +2564,14 @@ func (ec *executionContext) _Exchange(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = graphql.MarshalString("Exchange")
 		case "ID":
 			out.Values[i] = ec._Exchange_ID(ctx, field, obj)
-		case "exchangeFromBill":
-			out.Values[i] = ec._Exchange_exchangeFromBill(ctx, field, obj)
-		case "exchangeToBill":
-			out.Values[i] = ec._Exchange_exchangeToBill(ctx, field, obj)
+		case "fromBill":
+			out.Values[i] = ec._Exchange_fromBill(ctx, field, obj)
+		case "toBill":
+			out.Values[i] = ec._Exchange_toBill(ctx, field, obj)
 		case "exchangeRate":
 			out.Values[i] = ec._Exchange_exchangeRate(ctx, field, obj)
+		case "people":
+			out.Values[i] = ec._Exchange_people(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2719,26 +2583,25 @@ func (ec *executionContext) _Exchange(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var foreignBillImplementors = []string{"ForeignBill", "Bill"}
+var exchangePairImplementors = []string{"ExchangePair"}
 
-func (ec *executionContext) _ForeignBill(ctx context.Context, sel ast.SelectionSet, obj *model.ForeignBill) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, foreignBillImplementors)
+func (ec *executionContext) _ExchangePair(ctx context.Context, sel ast.SelectionSet, obj *model.ExchangePair) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, exchangePairImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("ForeignBill")
+			out.Values[i] = graphql.MarshalString("ExchangePair")
 		case "ID":
-			out.Values[i] = ec._ForeignBill_ID(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "currency":
-			out.Values[i] = ec._ForeignBill_currency(ctx, field, obj)
-		case "value":
-			out.Values[i] = ec._ForeignBill_value(ctx, field, obj)
+			out.Values[i] = ec._ExchangePair_ID(ctx, field, obj)
+		case "owner":
+			out.Values[i] = ec._ExchangePair_owner(ctx, field, obj)
+		case "fromValue":
+			out.Values[i] = ec._ExchangePair_fromValue(ctx, field, obj)
+		case "toValue":
+			out.Values[i] = ec._ExchangePair_toValue(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2804,39 +2667,6 @@ func (ec *executionContext) _Person(ctx context.Context, sel ast.SelectionSet, o
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "bill":
-			out.Values[i] = ec._Person_bill(ctx, field, obj)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var personalBillImplementors = []string{"PersonalBill", "Bill"}
-
-func (ec *executionContext) _PersonalBill(ctx context.Context, sel ast.SelectionSet, obj *model.PersonalBill) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, personalBillImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("PersonalBill")
-		case "ID":
-			out.Values[i] = ec._PersonalBill_ID(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "currency":
-			out.Values[i] = ec._PersonalBill_currency(ctx, field, obj)
-		case "value":
-			out.Values[i] = ec._PersonalBill_value(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2878,39 +2708,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
 			out.Values[i] = ec._Query___schema(ctx, field)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var totalBillImplementors = []string{"TotalBill", "Bill"}
-
-func (ec *executionContext) _TotalBill(ctx context.Context, sel ast.SelectionSet, obj *model.TotalBill) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, totalBillImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TotalBill")
-		case "ID":
-			out.Values[i] = ec._TotalBill_ID(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "currency":
-			out.Values[i] = ec._TotalBill_currency(ctx, field, obj)
-		case "value":
-			out.Values[i] = ec._TotalBill_value(ctx, field, obj)
-		case "people":
-			out.Values[i] = ec._TotalBill_people(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3450,6 +3247,10 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 }
 
 func (ec *executionContext) marshalOBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx context.Context, sel ast.SelectionSet, v model.Bill) graphql.Marshaler {
+	return ec._Bill(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx context.Context, sel ast.SelectionSet, v *model.Bill) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -3501,6 +3302,17 @@ func (ec *executionContext) marshalOExchange2ᚖgithubᚗcomᚋimladenov1997ᚋv
 	return ec._Exchange(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalOExchangePair2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐExchangePair(ctx context.Context, sel ast.SelectionSet, v model.ExchangePair) graphql.Marshaler {
+	return ec._ExchangePair(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOExchangePair2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐExchangePair(ctx context.Context, sel ast.SelectionSet, v *model.ExchangePair) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ExchangePair(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOFloat2float64(ctx context.Context, v interface{}) (float64, error) {
 	return graphql.UnmarshalFloat(v)
 }
@@ -3522,17 +3334,6 @@ func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel as
 		return graphql.Null
 	}
 	return ec.marshalOFloat2float64(ctx, sel, *v)
-}
-
-func (ec *executionContext) marshalOForeignBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐForeignBill(ctx context.Context, sel ast.SelectionSet, v model.ForeignBill) graphql.Marshaler {
-	return ec._ForeignBill(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalOForeignBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐForeignBill(ctx context.Context, sel ast.SelectionSet, v *model.ForeignBill) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._ForeignBill(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOID2string(ctx context.Context, v interface{}) (string, error) {
@@ -3583,17 +3384,6 @@ func (ec *executionContext) marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvol
 	return ec._Person(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOPersonalBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPersonalBill(ctx context.Context, sel ast.SelectionSet, v model.PersonalBill) graphql.Marshaler {
-	return ec._PersonalBill(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalOPersonalBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPersonalBill(ctx context.Context, sel ast.SelectionSet, v *model.PersonalBill) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._PersonalBill(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
 	return graphql.UnmarshalString(v)
 }
@@ -3615,17 +3405,6 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 		return graphql.Null
 	}
 	return ec.marshalOString2string(ctx, sel, *v)
-}
-
-func (ec *executionContext) marshalOTotalBill2githubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐTotalBill(ctx context.Context, sel ast.SelectionSet, v model.TotalBill) graphql.Marshaler {
-	return ec._TotalBill(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalOTotalBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐTotalBill(ctx context.Context, sel ast.SelectionSet, v *model.TotalBill) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._TotalBill(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

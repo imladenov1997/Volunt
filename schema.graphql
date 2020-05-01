@@ -2,26 +2,7 @@ type Currency {
     name: String!
 }
 
-interface Bill {
-    ID: ID!
-    currency: Currency
-    value: Float
-}
-
-type TotalBill implements Bill {
-    ID: ID!
-	currency: Currency
-	value: Float
-    people: Map
-}
-
-type PersonalBill implements Bill {
-    ID: ID!
-    currency: Currency
-    value: Float
-}
-
-type ForeignBill implements Bill {
+type Bill {
     ID: ID!
 	currency: Currency
 	value: Float
@@ -29,14 +10,21 @@ type ForeignBill implements Bill {
 
 type Person {
     ID: ID!
-    bill: PersonalBill
 }
 
 type Exchange {
     ID: ID
-    exchangeFromBill: TotalBill 
-    exchangeToBill: ForeignBill
+    fromBill: Bill
+    toBill: Bill
     exchangeRate: Float
+    people: Map
+}
+
+type ExchangePair {
+    ID: ID
+    owner: Person
+    fromValue: Float
+    toValue: Float
 }
 
 type Query {
@@ -45,7 +33,7 @@ type Query {
 
 type Mutation {
     createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String!, toBillValue: Float!): Exchange,
-    addPerson (exchangeID: String!, value: Float!): Person
+    addPerson (exchangeID: String!, value: Float!): ExchangePair
     updatePersonalBill (exchangeID: ID!, personID: ID!, value: Float!): Person
     updateForeignBill (exchangeID: ID!, currency: String!, value: String!): Bill
     updateTotalBill (exchangeID: ID!, currency: String!, value: String!): Bill

@@ -1,81 +1,67 @@
 package model
 
-import (
-	"github.com/google/uuid"
-	"errors"
-)
+import "github.com/google/uuid"
 
-func NewTotalBill(billCurrency *string, value *float64) *TotalBill {
+func NewBill(billCurrency *string, value *float64) *Bill {
 	billID := uuid.New().String()
 	currency := Currency{Name: *billCurrency}
-	people := make(map[string]interface{})
-	totalBill := TotalBill{ID: billID, Currency: &currency, Value: value, People: people}
+	//people := make(map[string]interface{})
+	bill := Bill{ID: billID, Currency: &currency, Value: value}
 
-	return &totalBill
+	return &bill
 }
 
-func NewForeignBill(billCurrency *string, value *float64) *ForeignBill {
-	var currencyName string
-	currencyName = ""
-
-	if (billCurrency != nil) {
-		currencyName = *billCurrency
-	}
-
-	billID := uuid.New().String()
-	currency := Currency{Name: currencyName}
-	foreignBill := ForeignBill{ID: billID, Currency: &currency, Value: value}
-
-	return &foreignBill
-}
-
-func NewExchangeBill(totalBill *TotalBill, foreignBill *ForeignBill) *Exchange {
+func NewExchangeBill(totalBill *Bill, foreignBill *Bill) *Exchange {
 	var exchangeRate float64
 	exchangeRate = 0.0
 
-	if (*foreignBill.Value == 0.0) {
+	if *foreignBill.Value == 0.0 {
 		panic("Division By Zero")
 	}
-	
+
 	billID := uuid.New().String()
 	exchangeRate = *totalBill.Value / *foreignBill.Value
 
-	exc := Exchange{ID: &billID, ExchangeFromBill: totalBill, ExchangeToBill: foreignBill, ExchangeRate: &exchangeRate}
+
+	people := make(map[string]interface{})
+
+	exc := Exchange{ID: &billID, FromBill: totalBill, ToBill: foreignBill, ExchangeRate: &exchangeRate, People: people}
 
 	return &exc
 }
 
-func (totalBill *TotalBill) AddPersonRef(person *Person) *Person {
-	totalBill.People[person.ID] = person
+func (exchange *Exchange) AddPersonRef(person *Person, exchangePair *ExchangePair) *ExchangePair {
+	exchange.People[person.ID] = exchangePair
 
-	return person
+	return exchangePair
 }
 
-func (totalBill *TotalBill) AddPerson(value *float64) *Person {
+func (exchange *Exchange) AddPerson(value *float64) *ExchangePair {
 	personID := uuid.New().String()
-	billID := uuid.New().String()
+	exchangePairID := uuid.New().String()
 
-	personalBill := PersonalBill{ID: billID, Currency: totalBill.Currency, Value: value}
-	person := &Person{ID: personID, Bill: &personalBill}
+	person := &Person{ID: personID}
+	toValue := *value / *exchange.ExchangeRate
+	exchangePair := &ExchangePair{ID: &exchangePairID, Owner: person, FromValue: value, ToValue: &toValue}
 
-	totalBill.AddPersonRef(person)
+	exchange.AddPersonRef(person, exchangePair)
 
-	return person
+	return exchangePair
 }
 
-func (exchange *Exchange) GetTotalBill() *TotalBill {
-	return exchange.ExchangeFromBill
-}
-
-func (bill *TotalBill) HasPerson(personID *string) (bool, error) {
-	if (personID == nil) {
-		return false, errors.New("No valid PersonID")
-	}
-
-	_, hasVal := bill.People[*personID]
-	
-	return hasVal, nil
-}
+//func (exchange *Exchange) GetTotalBill() *TotalBill {
+//	return exchange.ExchangeFromBill
+//}
+//
+//func (bill *TotalBill) HasPerson(personID *string) (bool, error) {
+//	if (personID == nil) {
+//		return false, errors.New("No valid PersonID")
+//	}
+//
+//	_, hasVal := bill.People[*personID]
+//
+//	return hasVal, nil
+//}
 
 func (person *Person) CheckID(personID *string) bool {
 	return person.ID == *personID

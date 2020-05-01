@@ -2,8 +2,10 @@
 
 package model
 
-type Bill interface {
-	IsBill()
+type Bill struct {
+	ID       string    `json:"ID"`
+	Currency *Currency `json:"currency"`
+	Value    *float64  `json:"value"`
 }
 
 type Currency struct {
@@ -11,38 +13,20 @@ type Currency struct {
 }
 
 type Exchange struct {
-	ID               *string      `json:"ID"`
-	ExchangeFromBill *TotalBill   `json:"exchangeFromBill"`
-	ExchangeToBill   *ForeignBill `json:"exchangeToBill"`
-	ExchangeRate     *float64     `json:"exchangeRate"`
+	ID           *string                `json:"ID"`
+	FromBill     *Bill                  `json:"fromBill"`
+	ToBill       *Bill                  `json:"toBill"`
+	ExchangeRate *float64               `json:"exchangeRate"`
+	People       map[string]interface{} `json:"people"`
 }
 
-type ForeignBill struct {
-	ID       string    `json:"ID"`
-	Currency *Currency `json:"currency"`
-	Value    *float64  `json:"value"`
+type ExchangePair struct {
+	ID        *string  `json:"ID"`
+	Owner     *Person  `json:"owner"`
+	FromValue *float64 `json:"fromValue"`
+	ToValue   *float64 `json:"toValue"`
 }
-
-func (ForeignBill) IsBill() {}
 
 type Person struct {
-	ID   string        `json:"ID"`
-	Bill *PersonalBill `json:"bill"`
+	ID string `json:"ID"`
 }
-
-type PersonalBill struct {
-	ID       string    `json:"ID"`
-	Currency *Currency `json:"currency"`
-	Value    *float64  `json:"value"`
-}
-
-func (PersonalBill) IsBill() {}
-
-type TotalBill struct {
-	ID       string                 `json:"ID"`
-	Currency *Currency              `json:"currency"`
-	Value    *float64               `json:"value"`
-	People   map[string]interface{} `json:"people"`
-}
-
-func (TotalBill) IsBill() {}

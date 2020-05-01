@@ -17,7 +17,7 @@ func (r *mutationResolver) CreateExchange(ctx context.Context, totalBillCurrency
 	return exchange, err
 }
 
-func (r *mutationResolver) AddPerson(ctx context.Context, exchangeID string, value float64) (*model.Person, error) {
+func (r *mutationResolver) AddPerson(ctx context.Context, exchangeID string, value float64) (*model.ExchangePair, error) {
 	person, err := r.mutations.AddPerson(&exchangeID, &value)
 
 	return person, err
@@ -27,15 +27,15 @@ func (r *mutationResolver) UpdatePersonalBill(ctx context.Context, exchangeID st
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) UpdateForeignBill(ctx context.Context, exchangeID string, currency string, value string) (model.Bill, error) {
+func (r *mutationResolver) UpdateForeignBill(ctx context.Context, exchangeID string, currency string, value string) (*model.Bill, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) UpdateTotalBill(ctx context.Context, exchangeID string, currency string, value string) (model.Bill, error) {
+func (r *mutationResolver) UpdateTotalBill(ctx context.Context, exchangeID string, currency string, value string) (*model.Bill, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) ChangeCurrency(ctx context.Context, billID string, currency string, value string) (model.Bill, error) {
+func (r *mutationResolver) ChangeCurrency(ctx context.Context, billID string, currency string, value string) (*model.Bill, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
