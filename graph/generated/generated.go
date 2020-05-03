@@ -69,7 +69,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddPerson          func(childComplexity int, exchangeID string, value float64) int
-		ChangeCurrency     func(childComplexity int, billID string, currency string, value string) int
+		ChangeCurrency     func(childComplexity int, exchangeID string, currency string, value *float64) int
 		CreateExchange     func(childComplexity int, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) int
 		UpdateForeignBill  func(childComplexity int, exchangeID string, currency string, value string) int
 		UpdatePersonalBill func(childComplexity int, exchangeID string, personID string, value float64) int
@@ -88,10 +88,10 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreateExchange(ctx context.Context, totalBillCurrency string, totalBillValue float64, toBillCurrency string, toBillValue float64) (*model.Exchange, error)
 	AddPerson(ctx context.Context, exchangeID string, value float64) (*model.ExchangePair, error)
-	UpdatePersonalBill(ctx context.Context, exchangeID string, personID string, value float64) (*model.Person, error)
+	UpdatePersonalBill(ctx context.Context, exchangeID string, personID string, value float64) (*model.ExchangePair, error)
 	UpdateForeignBill(ctx context.Context, exchangeID string, currency string, value string) (*model.Bill, error)
 	UpdateTotalBill(ctx context.Context, exchangeID string, currency string, value string) (*model.Bill, error)
-	ChangeCurrency(ctx context.Context, billID string, currency string, value string) (*model.Bill, error)
+	ChangeCurrency(ctx context.Context, exchangeID string, currency string, value *float64) (*model.Exchange, error)
 }
 type QueryResolver interface {
 	GetExchange(ctx context.Context, id string) (*model.Exchange, error)
@@ -225,7 +225,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ChangeCurrency(childComplexity, args["billID"].(string), args["currency"].(string), args["value"].(string)), true
+		return e.complexity.Mutation.ChangeCurrency(childComplexity, args["exchangeID"].(string), args["currency"].(string), args["value"].(*float64)), true
 
 	case "Mutation.createExchange":
 		if e.complexity.Mutation.CreateExchange == nil {
@@ -394,10 +394,10 @@ type Query {
 type Mutation {
     createExchange (totalBillCurrency: String!, totalBillValue: Float!, toBillCurrency: String!, toBillValue: Float!): Exchange,
     addPerson (exchangeID: String!, value: Float!): ExchangePair
-    updatePersonalBill (exchangeID: ID!, personID: ID!, value: Float!): Person
+    updatePersonalBill (exchangeID: ID!, personID: ID!, value: Float!): ExchangePair
     updateForeignBill (exchangeID: ID!, currency: String!, value: String!): Bill
     updateTotalBill (exchangeID: ID!, currency: String!, value: String!): Bill
-    changeCurrency (billID: ID!, currency: String!, value: String!): Bill
+    changeCurrency (exchangeID: ID!, currency: String!, value: Float): Exchange
 }
 
 scalar Map`, BuiltIn: false},
@@ -434,13 +434,13 @@ func (ec *executionContext) field_Mutation_changeCurrency_args(ctx context.Conte
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["billID"]; ok {
+	if tmp, ok := rawArgs["exchangeID"]; ok {
 		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["billID"] = arg0
+	args["exchangeID"] = arg0
 	var arg1 string
 	if tmp, ok := rawArgs["currency"]; ok {
 		arg1, err = ec.unmarshalNString2string(ctx, tmp)
@@ -449,9 +449,9 @@ func (ec *executionContext) field_Mutation_changeCurrency_args(ctx context.Conte
 		}
 	}
 	args["currency"] = arg1
-	var arg2 string
+	var arg2 *float64
 	if tmp, ok := rawArgs["value"]; ok {
-		arg2, err = ec.unmarshalNString2string(ctx, tmp)
+		arg2, err = ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1170,9 +1170,9 @@ func (ec *executionContext) _Mutation_updatePersonalBill(ctx context.Context, fi
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Person)
+	res := resTmp.(*model.ExchangePair)
 	fc.Result = res
-	return ec.marshalOPerson2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐPerson(ctx, field.Selections, res)
+	return ec.marshalOExchangePair2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐExchangePair(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_updateForeignBill(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1275,7 +1275,7 @@ func (ec *executionContext) _Mutation_changeCurrency(ctx context.Context, field 
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ChangeCurrency(rctx, args["billID"].(string), args["currency"].(string), args["value"].(string))
+		return ec.resolvers.Mutation().ChangeCurrency(rctx, args["exchangeID"].(string), args["currency"].(string), args["value"].(*float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1284,9 +1284,9 @@ func (ec *executionContext) _Mutation_changeCurrency(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Bill)
+	res := resTmp.(*model.Exchange)
 	fc.Result = res
-	return ec.marshalOBill2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐBill(ctx, field.Selections, res)
+	return ec.marshalOExchange2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐExchange(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Person_ID(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {

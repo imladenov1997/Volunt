@@ -17,7 +17,9 @@ func (db DB) CreateExchange(exchange *model.Exchange) error {
 func (db DB) GetExchange(ID *string) (*model.Exchange, error) {
 	// TODO - implement 
 
-	if (GlobalExchange == nil) {
+	if GlobalExchange == nil {
+		return nil, errors.New("No such exchange")
+	} else if *GlobalExchange.ID != *ID {
 		return nil, errors.New("No such exchange")
 	}
 

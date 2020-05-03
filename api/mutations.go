@@ -1,9 +1,10 @@
 package api
+
 import (
+	"errors"
+	"github.com/imladenov1997/volunt/db"
 	// "github.com/imladenov1997/volunt/components"
 	"github.com/imladenov1997/volunt/graph/model"
-	"github.com/imladenov1997/volunt/db"
-	"errors"
 	// "fmt"
 )
 
@@ -40,19 +41,48 @@ func (m *Mutations) AddPerson(exchangeID *string, value *float64) (person *model
 		return nil, err
 	}
 
+	toBillValue := exchange.GetToBillValue()
+
+	if toBillValue == nil {
+		return nil, errors.New("Target amount missing")
+	}
+
+	if *value > *toBillValue {
+		return nil, errors.New("Added amount higher than total")
+	}
+
 	person = exchange.AddPerson(value)
 
 	return person, nil
 }
 
-func (m *Mutations) UpdatePersonalBill(exchangeID *string, personID *string, value *float64) (*model.Person, error) {
+func (m *Mutations) UpdatePersonalBill(exchangeID *string, personID *string, value *float64) (*model.ExchangePair, error) {
 	database := db.DB{}
-	_, exchangeErr := database.GetExchange(exchangeID)
+	exchange, exchangeErr := database.GetExchange(exchangeID)
 
 	if exchangeErr != nil {
 		return nil, exchangeErr
 	}
 
-	return nil, nil
+	result := exchange.UpdatePersonalBill(personID, value)
+
+	return nil, result
+}
+
+func (m *Mutations) UpdateExchangeCurrency(exchangeID *string, currency *string, value *float64) (*model.Exchange, error) {
+	database := db.DB{}
+	exchange, exchangeErr := database.GetExchange(exchangeID)
+
+	if exchangeErr != nil {
+		return nil, exchangeErr
+	}
+
+	if currency == nil {
+		return nil, errors.New("Currency not provided")
+	}
+
+	err := exchange.UpdateExchangeCurrency(currency, value)
+
+	return exchange, err
 
 }
