@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/imladenov1997/volunt/db"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +19,8 @@ func main() {
 	if port == "" {
 		port = defaultPort
 	}
+
+	db.Connect()
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
 

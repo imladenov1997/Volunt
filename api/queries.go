@@ -8,8 +8,10 @@ import (
 type Queries struct{}
 
 func (q *Queries) GetExchange(id *string) (*model.Exchange, error) {
-	database := db.DB{}
-	exchange, exchangeErr := database.GetExchange(id)
+	var exchange model.Exchange
 
-	return exchange, exchangeErr
+	database := db.DB{}
+	exchangeErr := database.GetExchange(id).Decode(&exchange)
+
+	return &exchange, exchangeErr
 }

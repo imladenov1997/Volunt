@@ -18,6 +18,7 @@ type Exchange struct {
 	ToBill       *Bill                  `json:"toBill"`
 	ExchangeRate *float64               `json:"exchangeRate"`
 	People       map[string]interface{} `json:"people"`
+	PersonOnly   *ExchangePair          `json:"personOnly"`
 }
 
 type ExchangePair struct {

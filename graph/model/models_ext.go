@@ -107,6 +107,21 @@ func (exchange *Exchange) UpdatePersonalBill(personID *string, fromValue *float6
 	return nil
 }
 
+func (exchange *Exchange) GetPersonalBill(personID *string) (*ExchangePair, error) {
+	if personID == nil {
+		return nil, errors.New("personID is nil")
+	}
+
+	exchangePair := exchange.People[*personID].(*ExchangePair)
+
+	if exchangePair == nil {
+		return nil, errors.New("No such Exchange Pair")
+	}
+
+	return exchangePair, nil
+
+}
+
 func (exchange *Exchange) UpdateExchangeCurrency(currency *string, value *float64) error {
 	exchange.FromBill.ChangeBillCurrency(currency)
 

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
-	"net/http"
+	"fmt"
 	"github.com/imladenov1997/volunt/app/response"
-	"github.com/imladenov1997/volunt/graphql/queries"
 	"github.com/imladenov1997/volunt/components"
+	"github.com/imladenov1997/volunt/graphql/queries"
+	"net/http"
 
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
@@ -45,6 +45,8 @@ func main() {
 	http.HandleFunc("/", returnJSON(home))
 	http.Handle("/graph-ql", disableCors(h))
 	http.ListenAndServe(":3000", nil)
+
+
 }
 
 func disableCors(h http.Handler) http.Handler {

@@ -57,6 +57,7 @@ type ComplexityRoot struct {
 		FromBill     func(childComplexity int) int
 		ID           func(childComplexity int) int
 		People       func(childComplexity int) int
+		PersonOnly   func(childComplexity int, id string) int
 		ToBill       func(childComplexity int) int
 	}
 
@@ -167,6 +168,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Exchange.People(childComplexity), true
+
+	case "Exchange.personOnly":
+		if e.complexity.Exchange.PersonOnly == nil {
+			break
+		}
+
+		args, err := ec.field_Exchange_personOnly_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Exchange.PersonOnly(childComplexity, args["id"].(string)), true
 
 	case "Exchange.toBill":
 		if e.complexity.Exchange.ToBill == nil {
@@ -378,6 +391,7 @@ type Exchange {
     toBill: Bill
     exchangeRate: Float
     people: Map
+    personOnly(id: ID!): ExchangePair
 }
 
 type ExchangePair {
@@ -407,6 +421,20 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Exchange_personOnly_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Mutation_addPerson_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -935,6 +963,44 @@ func (ec *executionContext) _Exchange_people(ctx context.Context, field graphql.
 	res := resTmp.(map[string]interface{})
 	fc.Result = res
 	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Exchange_personOnly(ctx context.Context, field graphql.CollectedField, obj *model.Exchange) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Exchange",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Exchange_personOnly_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PersonOnly, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.ExchangePair)
+	fc.Result = res
+	return ec.marshalOExchangePair2ᚖgithubᚗcomᚋimladenov1997ᚋvoluntᚋgraphᚋmodelᚐExchangePair(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ExchangePair_ID(ctx context.Context, field graphql.CollectedField, obj *model.ExchangePair) (ret graphql.Marshaler) {
@@ -2572,6 +2638,8 @@ func (ec *executionContext) _Exchange(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._Exchange_exchangeRate(ctx, field, obj)
 		case "people":
 			out.Values[i] = ec._Exchange_people(ctx, field, obj)
+		case "personOnly":
+			out.Values[i] = ec._Exchange_personOnly(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

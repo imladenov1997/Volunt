@@ -18,6 +18,7 @@ type Exchange {
     toBill: Bill
     exchangeRate: Float
     people: Map
+    personOnly(id: ID!): ExchangePair
 }
 
 type ExchangePair {
