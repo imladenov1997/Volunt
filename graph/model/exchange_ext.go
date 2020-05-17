@@ -5,15 +5,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func NewBill(billCurrency *string, value *float64) *Bill {
-	billID := uuid.New().String()
-	currency := Currency{Name: *billCurrency}
-	//people := make(map[string]interface{})
-	bill := Bill{ID: billID, Currency: &currency, Value: value}
-
-	return &bill
-}
-
 func NewExchangeBill(totalBill *Bill, foreignBill *Bill) *Exchange {
 	var exchangeRate float64
 	exchangeRate = 0.0
@@ -64,22 +55,6 @@ func (exchange *Exchange) GetTotalBill() *Bill {
 	return exchange.FromBill
 }
 
-func (person *Person) CheckID(personID *string) bool {
-	return person.ID == *personID
-}
-
-func (bill *Bill) getValue() *float64 {
-	return bill.Value
-}
-
-func (exchangePair *ExchangePair) UpdateFromValue(value *float64) {
-	exchangePair.FromValue = value
-}
-
-func (exchangePair *ExchangePair) UpdateToValue(value *float64) {
-	exchangePair.ToValue = value
-}
-
 func (exchange *Exchange) UpdatePersonalBill(personID *string, fromValue *float64) error {
 	if personID == nil {
 		return errors.New("Person ID error")
@@ -112,13 +87,17 @@ func (exchange *Exchange) GetPersonalBill(personID *string) (*ExchangePair, erro
 		return nil, errors.New("personID is nil")
 	}
 
-	exchangePair := exchange.People[*personID].(*ExchangePair)
+	exchangePairInterface, exists := exchange.People[*personID]
 
-	if exchangePair == nil {
-		return nil, errors.New("No such Exchange Pair")
+
+	if !exists {
+		return nil, errors.New("Person not found in this exchange")
 	}
 
-	return exchangePair, nil
+	exchangePair := exchangePairInterface.(ExchangePair)
+	exchangePairPtr := &exchangePair
+
+	return exchangePairPtr, nil
 
 }
 
@@ -132,10 +111,6 @@ func (exchange *Exchange) UpdateExchangeCurrency(currency *string, value *float6
 	err := exchange.UpdateExchangeRate(value)
 
 	return err
-}
-
-func (bill *Bill) ChangeBillCurrency(currency *string) {
-	bill.Currency = &Currency{Name: *currency}
 }
 
 func (exchange *Exchange) UpdateExchangeRate(fromBillValue *float64) error {

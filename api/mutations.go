@@ -73,11 +73,11 @@ func (m *Mutations) UpdatePersonalBill(exchangeID *string, personID *string, val
 		return nil, exchangeErr
 	}
 
-	//result := exchange.UpdatePersonalBill(personID, value)
+	result := exchange.UpdatePersonalBill(personID, value)
 
-	//if result != nil {
-	//	return nil, result
-	//}
+	if result != nil {
+		return nil, result
+	}
 
 	exchangePair, err := exchange.GetPersonalBill(personID)
 	err = database.UpsertPersonToExchange(exchangeID, exchangePair)

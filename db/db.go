@@ -46,11 +46,15 @@ func (db DB) GetExchange(ID *string) *mongo.SingleResult {
 func (db DB) UpsertPersonToExchange(exchangeID *string, exchangePair *model.ExchangePair) error {
 	person := exchangePair.Owner
 	exchangeCollection := MongoDB.Collection(exchangeCollectionName)
+
+	fmt.Println(exchangePair)
+	fmt.Println(*exchangePair)
+
 	_, err := exchangeCollection.UpdateOne(context.TODO(), bson.M{
 		"id": exchangeID,
 	}, bson.M{
 		"$set": bson.M{
-			"people." + person.ID: exchangePair,
+			"people." + person.ID: *exchangePair,
 		},
 	})
 
