@@ -62,7 +62,11 @@ func (exchange *Exchange) UpdatePersonalBill(personID *string, fromValue *float6
 	}
 
 	exchangePairInterface, exists := exchange.People[*personID]
+	fmt.Println(&exchangePairInterface)
+	fmt.Println(exchangePairInterface)
 	exchangePair := exchangePairInterface.(ExchangePair)
+	fmt.Println(&exchangePair)
+	fmt.Println(exchangePair)
 
 	if !exists {
 		return errors.New("Person not found in this exchange")
@@ -78,8 +82,6 @@ func (exchange *Exchange) UpdatePersonalBill(personID *string, fromValue *float6
 
 	exchangePair.UpdateFromValue(fromValue)
 	exchangePair.UpdateToValue(&toValue)
-
-	fmt.Println(exchangePair.Owner.ID)
 
 	exchange.People[*personID] = exchangePair
 
@@ -162,7 +164,6 @@ func (mExchange *MongoExchange) ToGQLExchange() Exchange {
 
 	for key, value := range mExchange.People {
 		gqlExchange.People[key] = value
-		fmt.Println(&value)
 	}
 
 	return gqlExchange
