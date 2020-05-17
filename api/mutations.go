@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"github.com/imladenov1997/volunt/db"
 	// "github.com/imladenov1997/volunt/components"
 	"github.com/imladenov1997/volunt/graph/model"
@@ -65,6 +66,12 @@ func (m *Mutations) UpdatePersonalBill(exchangeID *string, personID *string, val
 	database := db.DB{}
 	exchange, err := getExchange(exchangeID)
 
+	for k, v := range exchange.People {
+		fmt.Println(k)
+		fmt.Println(v.(*model.ExchangePair).Owner.ID)
+		fmt.Println("------")
+	}
+
 	if err != nil {
 		return nil, errors.New("Exchange retrieval failed")
 	}
@@ -115,6 +122,7 @@ func getExchange(exchangeID *string) (*model.Exchange, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	exchange = mongoExchange.ToGQLExchange()
 
 	return &exchange, nil

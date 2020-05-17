@@ -2,7 +2,6 @@ package model
 
 import (
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
 )
 
@@ -62,11 +61,7 @@ func (exchange *Exchange) UpdatePersonalBill(personID *string, fromValue *float6
 	}
 
 	exchangePairInterface, exists := exchange.People[*personID]
-	fmt.Println(&exchangePairInterface)
-	fmt.Println(exchangePairInterface)
-	exchangePair := exchangePairInterface.(ExchangePair)
-	fmt.Println(&exchangePair)
-	fmt.Println(exchangePair)
+	exchangePair := exchangePairInterface.(*ExchangePair)
 
 	if !exists {
 		return errors.New("Person not found in this exchange")
@@ -83,7 +78,7 @@ func (exchange *Exchange) UpdatePersonalBill(personID *string, fromValue *float6
 	exchangePair.UpdateFromValue(fromValue)
 	exchangePair.UpdateToValue(&toValue)
 
-	exchange.People[*personID] = exchangePair
+	//exchange.People[*personID] = exchangePair
 
 	return nil
 }
@@ -100,9 +95,9 @@ func (exchange *Exchange) GetPersonalBill(personID *string) (*ExchangePair, erro
 		return nil, errors.New("Person not found in this exchange")
 	}
 
-	exchangePair := exchangePairInterface.(ExchangePair)
+	exchangePair := exchangePairInterface.(*ExchangePair)
 
-	return &exchangePair, nil
+	return exchangePair, nil
 
 }
 
@@ -148,7 +143,7 @@ type MongoExchange struct {
 	FromBill     *Bill                   `json:"fromBill"`
 	ToBill       *Bill                   `json:"toBill"`
 	ExchangeRate *float64                `json:"exchangeRate"`
-	People       map[string]ExchangePair `json:"people"`
+	People       map[string]*ExchangePair `json:"people"`
 	PersonOnly   *ExchangePair           `json:"personOnly"`
 }
 
