@@ -34,13 +34,11 @@ func (m *Mutations) CreateExchange(totalBillCurrency *string, totalBillValue *fl
 }
 
 func (m *Mutations) AddPerson(exchangeID *string, value *float64) (exchangePair *model.ExchangePair, errMsg error) {
-	var exchange model.Exchange
-
 	database := db.DB{}
-	err := database.GetExchange(exchangeID).Decode(&exchange)
+	exchange, err := getExchange(exchangeID)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Exchange retrieval failed")
 	}
 
 	toBillValue := exchange.GetToBillValue()
@@ -64,13 +62,11 @@ func (m *Mutations) AddPerson(exchangeID *string, value *float64) (exchangePair 
 }
 
 func (m *Mutations) UpdatePersonalBill(exchangeID *string, personID *string, value *float64) (*model.ExchangePair, error) {
-	var exchange model.Exchange
-
 	database := db.DB{}
-	exchangeErr := database.GetExchange(exchangeID).Decode(&exchange)
+	exchange, err := getExchange(exchangeID)
 
-	if exchangeErr != nil {
-		return nil, exchangeErr
+	if err != nil {
+		return nil, errors.New("Exchange retrieval failed")
 	}
 
 	result := exchange.UpdatePersonalBill(personID, value)
@@ -108,3 +104,20 @@ func (m *Mutations) UpdateExchangeCurrency(exchangeID *string, currency *string,
 	return &exchange, err
 
 }
+
+func getExchange(exchangeID *string) (*model.Exchange, error) {
+	var mongoExchange model.MongoExchange
+	var exchange model.Exchange
+
+	database := db.DB{}
+	err := database.GetExchange(exchangeID).Decode(&mongoExchange)
+
+	if err != nil {
+		return nil, err
+	}
+	exchange = mongoExchange.ToGQLExchange()
+
+	return &exchange, nil
+}
+
+

@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var GlobalExchange *model.Exchange
 var MongoClient *mongo.Client
 var MongoDB *mongo.Database
 
@@ -47,8 +46,6 @@ func (db DB) UpsertPersonToExchange(exchangeID *string, exchangePair *model.Exch
 	person := exchangePair.Owner
 	exchangeCollection := MongoDB.Collection(exchangeCollectionName)
 
-	fmt.Println(exchangePair)
-	fmt.Println(*exchangePair)
 
 	_, err := exchangeCollection.UpdateOne(context.TODO(), bson.M{
 		"id": exchangeID,

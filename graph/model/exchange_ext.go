@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 )
 
@@ -75,9 +76,12 @@ func (exchange *Exchange) UpdatePersonalBill(personID *string, fromValue *float6
 
 	toValue := *fromValue / *rate
 
-
 	exchangePair.UpdateFromValue(fromValue)
 	exchangePair.UpdateToValue(&toValue)
+
+	fmt.Println(exchangePair.Owner.ID)
+
+	exchange.People[*personID] = exchangePair
 
 	return nil
 }
@@ -95,9 +99,8 @@ func (exchange *Exchange) GetPersonalBill(personID *string) (*ExchangePair, erro
 	}
 
 	exchangePair := exchangePairInterface.(ExchangePair)
-	exchangePairPtr := &exchangePair
 
-	return exchangePairPtr, nil
+	return &exchangePair, nil
 
 }
 
@@ -135,5 +138,32 @@ func (exchange *Exchange) UpdateExchangeRate(fromBillValue *float64) error {
 	}
 
 	return nil
+}
 
+// AWFUL WORKAROUND
+type MongoExchange struct {
+	ID           *string                 `json:"ID"`
+	FromBill     *Bill                   `json:"fromBill"`
+	ToBill       *Bill                   `json:"toBill"`
+	ExchangeRate *float64                `json:"exchangeRate"`
+	People       map[string]ExchangePair `json:"people"`
+	PersonOnly   *ExchangePair           `json:"personOnly"`
+}
+
+func (mExchange *MongoExchange) ToGQLExchange() Exchange {
+	gqlExchange := Exchange{
+		ID:           mExchange.ID,
+		FromBill:     mExchange.FromBill,
+		ToBill:       mExchange.ToBill,
+		ExchangeRate: mExchange.ExchangeRate,
+		People:       map[string]interface{}{},
+		PersonOnly:   mExchange.PersonOnly,
+	}
+
+	for key, value := range mExchange.People {
+		gqlExchange.People[key] = value
+		fmt.Println(&value)
+	}
+
+	return gqlExchange
 }
